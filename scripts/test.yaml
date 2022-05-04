@@ -1,0 +1,22 @@
+setup:
+  version: 1.0
+  name: test_script
+  description: test script used to validate nidaq_test_engine.py
+  device: Dev1
+  pins:
+    dout_1: /port0/line0
+    din_1: /port0/line1
+steps:
+  - id: 1
+    type: print
+    input: hello_world
+  - id: 2
+    type: ni_do
+    input:
+      pin: dout_1
+      val: True
+  - id: 3
+    type: ni_di
+    input:
+      pin: din_1
+      val: True
