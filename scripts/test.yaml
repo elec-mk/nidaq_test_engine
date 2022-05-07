@@ -2,20 +2,33 @@ setup:
   version: 1.0
   name: test_script
   description: test script used to validate nidaq_test_engine.py
-  device: Dev1
-  pins:
-    dout_1: /port0/line0
-    din_1: /port0/line1
+  devices:
+      - type: nidaq
+        name: nidaq
+        config:
+          device: Dev1
+          pins:
+            dout_1: /port0/line0
+            din_1: /port0/line1
+      - type: QPX1200SP
+        name: psu
+        config:
+          com_port: COM6
+          baud: 9600
+
 steps:
   - id: 1
+    device:
     type: print
     input: hello_world
   - id: 2
+    device: nidaq
     type: ni_do
     input:
       pin: dout_1
       val: True
   - id: 3
+    device: nidaq
     type: ni_di
     input:
       pin: din_1
