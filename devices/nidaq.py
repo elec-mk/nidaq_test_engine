@@ -25,7 +25,7 @@ class nidaq:
             pin_value = step['input']['val']
             task.do_channels.add_do_chan(pins)
             task.write(pin_value, auto_start=True)
-            # with
+        # with
     # def
 
     def get_digital_in(pins):

@@ -18,18 +18,22 @@ setup:
 
 steps:
   - id: 1
+    desc: print hello world to terminal
     device:
     type: print
-    input: hello_world
+    param:
+      str: hello_world
   - id: 2
+    desc: set dout_1 high
     device: nidaq
     type: ni_do
-    input:
+    param:
       pin: dout_1
       val: True
   - id: 3
+    desc: read din_1
     device: nidaq
     type: ni_di
-    input:
+    param:
       pin: din_1
       val: True
