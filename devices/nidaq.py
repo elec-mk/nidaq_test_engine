@@ -3,25 +3,7 @@ from nidaqmx import system
 
 import logging
 
-def get_nidaq_devices():
-    """prints a list of available nidaq devices to the terminal
-    """
-    print('available nidaq devices:')
-    for device in system.System.local().devices:
-        print(device.name)
 
-        print('analog inputs:')
-        for channel in device.ai_physical_chans.channel_names:
-            print(f'   - {channel}')
-        print('analog outputs:')
-        for channel in device.ao_physical_chans.channel_names:
-            print(f'   - {channel}')
-        print('digital io:')
-        for channel in device.di_lines.channel_names:
-            print(f'   - {channel}')
-
-    # for
-# def
 
 
 
@@ -39,28 +21,64 @@ class nidaq:
 
 
         self.load_config(config)
-
     # def
 
-    def load_config(self, config):
+    @staticmethod
+    def get_nidaq_devices():
+        """prints a list of available nidaq devices to the terminal
+        """
+        print('available nidaq devices:')
+        for device in system.System.local().devices:
+            print(device.name)
 
-        # is try/except necessary?
-        if isinstance(config, dict) and 'device' in config:
-            # sanity check that the expected device exists/is attached to system
-            if config['device'] in system.System.local().devices:
-                self.device = config['device']
-                self.logger.info('nidaq device %s found', self.device)
+            print('analog inputs:')
+            for channel in device.ai_physical_chans.channel_names:
+                print(f'   - {channel}')
+            print('analog outputs:')
+            for channel in device.ao_physical_chans.channel_names:
+                print(f'   - {channel}')
+            print('digital io:')
+            for channel in device.di_lines.channel_names:
+                print(f'   - {channel}')
+        # for
+    # def
+
+    def handle_test_step(self, step):
+        step_type = step['type']
+        step_pin = self.pins[step['param']['pin']]
+        step_val = step['param']['val']
+
+
+        if step_type == 'set_digital_out':
+            self.set_digital_out(step_pin, step_val)
+        elif step_type == 'get_digital_in':
+            measured = self.get_digital_in(step_pin)
+            if measured == step_val:
+                self.logger.info('step passed')
             else:
-                self.logger.error('Could not find device specified in config %s', self.device)
+                self.logger.error('step failed measured %s expected %s', measured, step_val)
             # else
-        # if
-
-        if 'pin_map' in config and isinstance(config['pin_map'], dict):
-            self.pins = config['pin_map'].copy()
+        elif step_type == 'set_analog_out':
+            pass
+        elif step_type == 'get_analog_in':
+            pass
         else:
-            self.logger.warning('Could not find pin map for %s', self.device)
-        # else
+            self.logger.error('Invalid test step for nidaq device : %s', step_type)
+    # def
 
+    def check_for_device(self, device):
+        ret_val = True # default error
+        if device in system.System.local().devices:
+            ret_val = False
+            self.logger.info('nidaq device %s found', device)
+        else:
+            self.logger.error('device not found %s', device)
+        # else
+        return ret_val
+    # def
+
+    def check_for_pins(self, pins):
+        ret_val = True
         device = self.sys.local().devices[self.device]
         # validate pins are valid
         device_pins = []
@@ -78,13 +96,43 @@ class nidaq:
 
         device_pins = new_pin
 
-        for pin in self.pins:
+        for pin in pins:
             try:
-                device_pins.index(self.pins[pin])
+                device_pins.index(pins[pin])
+                ret_val = False
             except ValueError:
-                self.logger.warning("couldn't find %s in list of available pins for %s", self.pins[pin], self.device)
+                self.logger.error("couldn't find %s in list of available pins for %s", pin, self.device)
+                ret_val = True
+                break
             # if
         # for
+        return ret_val
+    # def
+
+
+    def load_config(self, config):
+        # is try/except necessary?
+        if isinstance(config, dict):
+            # sanity check that the expected device exists/is attached to system
+            if 'device' in config and isinstance(config['device'], str):
+
+                if self.check_for_device(config['device']):
+                    raise Exception('Could not find device specified in config')
+                else:
+                    self.device =config['device']
+            else:
+                self.logger.error('No device field found in config')
+            # else
+
+            if 'pins' in config and isinstance(config['pins'], dict):
+                if self.check_for_pins(config['pins']):
+                    raise Exception('Could not find pin(s) specified in config')
+                else:
+                    self.pins = config['pins'].copy()
+            else:
+                self.logger.error('No pins field found in config')
+            # else
+        # if
     # def
 
 
@@ -132,9 +180,13 @@ class nidaq:
 # class
 
 if __name__ == '__main__':
-    get_nidaq_devices()
+    nidaq.get_nidaq_devices()
 
-    dev1 = nidaq({'device':'Dev1', 'pin_map':{'digital_test': 'port0', 'ao_test':'ao0', 'ai_test':'ai0', 'garbage':'rubbish'}})
+    dev1 = nidaq({'device':'Dev1', 'pins':{'do_test': 'port0/line0', 'di_test':'port0/line1', 'ao_test':'ao0', 'ai_test':'ai0'}})
+    test_step = {'id':2, 'desc':'set dout_1 high', 'device': 'nidaq', 'type':'set_digital_out', 'param':{'pin':'do_test', 'val':True}}
+
+
+    dev1.handle_test_step(test_step)
     dev1.set_analogue_out('ao0', 0.0)
 
 

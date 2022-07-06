@@ -26,14 +26,14 @@ steps:
   - id: 2
     desc: set dout_1 high
     device: nidaq
-    type: ni_do
+    type: set_digital_out
     param:
       pin: dout_1
       val: True
   - id: 3
     desc: read din_1
     device: nidaq
-    type: ni_di
+    type: get_digital_in
     param:
       pin: din_1
       val: True
